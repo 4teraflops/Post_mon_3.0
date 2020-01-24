@@ -1,0 +1,8 @@
+,id,operation_time,code,category,timeout,answer,status
+0,1,2020-01-24 16:33:52.645802,14149-15278-1,None,0.046115,provider == null,Услга не выведена
+1,2,2020-01-24 16:33:53.669419,111-15277-1,None,1.006277,bisys.UnknownAccountException: BIS-01640: Unknown Лицевой счет 11,OK
+2,3,2020-01-24 16:33:53.732649,111-11165-2,None,0.045408,PaymentPropertyException: BIS-01275: Incorrect payment property НАЗВАНИЕ СЛУЖБЫ: обязательно для заполнения,Format
+3,4,2020-01-24 16:33:53.786275,100-13579-41,None,0.043443,PaymentPropertyException: BIS-01275: Incorrect payment property ТЕЛЕФОН ОТПРАВИТЕЛЯ	: обязательно для заполнения,Format
+4,5,2020-01-24 16:33:54.291458,111-13834-5,None,0.491622,"--SUCCESS--Такси 434343(id:11665, code:111-13834-5)properties:{ПОЗЫВНОЙ=1}PersAccInfo2{desiredAmount=0, needShowBill=false, property={}, provider=null}",OK
+5,6,2020-01-24 16:33:54.786434,111-11618-3,None,0.479161,"--SUCCESS--Такси Браво(id:11787, code:111-11618-3)properties:{ПОЗЫВНОЙ=1}PersAccInfo2{desiredAmount=0, needShowBill=false, property={}, provider=null}",OK
+6,7,2020-01-24 16:33:55.257477,100-13430-1,None,0.451704,bisys.OtherPropertyException: BIS-01654: Incorrect property value. Первая цифра номера телефона должна быть 9. Реквизит: ЛИЦЕВОЙ _СЧЕТ,OK
