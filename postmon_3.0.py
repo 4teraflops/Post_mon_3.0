@@ -3,7 +3,6 @@ from datetime import datetime
 import sqlite3
 import json
 import time
-import pandas
 
 # глобальные переменные
 s = requests.Session()
@@ -45,10 +44,10 @@ def create_urls_list():
 
 
 def open_urls(urls):
-    first_id = get_cursor_id('global_answers_data') + 1
+    first_id = get_cursor_id('global_answers_data')
     for url in urls:
         r = s.get(url)
-        timeout = r.elapsed.total_seconds()
+        timeout = round(r.elapsed.total_seconds(), 5)  # Округление до 5 знаков после запятой
         answer_text = r.text.replace('--ERROR--\ncom.techinfocom.bisys.pay.utils.shared.exception.','').replace('\n', '').replace("'", '')
         code = str(url).replace(
             'https://uat.autopays.ru/api-shop/rs/shop/test?sec-key=96abc9ad-24dc-4125-9fc4-a8072f7b83c3&service-code=',
@@ -59,9 +58,7 @@ def open_urls(urls):
         cursor.execute(
             f"INSERT INTO global_answers_data VALUES (Null, '{operation_time}', '{code}', '{category}', '{timeout}', '{answer_text}', Null)")
         conn.commit()
-        print(
-            f'code - {code}||timeout - {timeout}||category - {category}||time - {operation_time}||answer_text - {answer_text}'
-        )
+        print(f'{code}||{timeout}||{category}||{operation_time}||{answer_text}')
     last_id = get_cursor_id('global_answers_data')
     print('Обновляю данные в часовой таблице')
     check_answers('global_answers_data', first_id, last_id)
@@ -130,7 +127,7 @@ def check_answers(table_name, first_id, last_id):
     # Подсчитаем общее кол-во проанализированных ПУ
     len_all_table = cursor.execute(f"SELECT id from {table_name} WHERE (id <= {last_id} AND id > {first_id})").fetchall()
     # Посмотрим есть ли ошибки у клиентов категории А
-    errors_a = cursor.execute(f"SELECT code, answer, status FROM {table_name} WHERE category = 'A' AND status = 'Error' AND (id <= {last_id} AND id > {first_id})").fetchall()
+    errors_a = cursor.execute(f"SELECT code, answer, status, operation_time FROM {table_name} WHERE category = 'A' AND status = 'Error' AND (id <= {last_id} AND id > {first_id})").fetchall()
     # Выводим срез по цифрам:
     print(f'\nВсего проанализировано: {len(len_all_table)} ПУ.\n')
     print('Из них: \n')
@@ -141,27 +138,19 @@ def check_answers(table_name, first_id, last_id):
     print(f'{len(id_shadow)} - услуга не выведена')
     print(f'\nКлиентов категории А с ошибками: {len(errors_a)}\n')
     for a in errors_a:
-        print(f'Код услуги: {a[0]}\nСтатус услуги: {a[2]}\nТекст ответа: {a[1]}\n')
+        print(f'Код услуги: {a[0]}\nСтатус услуги: {a[2]}\nТекст ответа: {a[1]}\nВремя проверки: {a[3]}\n')
     conn.commit()
     if len(errors_a) > 0:
         for a in errors_a:
-            alarmtext = f'Код услуги: {a[0]}\nСтатус услуги: {a[2]}\nТекст ответа: {a[1]}\n'
+            alarmtext = f'Код услуги: {a[0]}\nСтатус услуги: {a[2]}\nТекст ответа: {a[1]}\nВремя проверки: {a[3]}'
             do_alarm(alarmtext)
 
 
 def do_alarm(alarmtext):  # отправка сообщения в канал slack
     headers = {"Content-type": "application/json"}
-    url = "https://hooks.slack.com/services/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"
+    url = "https://hooks.slack.com/services/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"
     payload = {"text": f"{alarmtext}"}
     requests.post(url, headers=headers, data=json.dumps(payload))
-
-
-def import_to_csv(table_name):
-    print(f'Экспортирую таблицу {table_name} в csv.....', end='')
-    table = pandas.io.sql.read_sql(f'SELECT* from {table_name}', conn)
-    table.to_csv(f'{table_name}.csv')
-    print('...Готово')
-    conn.commit()
 
 
 if __name__ == '__main__':
@@ -170,9 +159,8 @@ if __name__ == '__main__':
             create_urls_list()
             end_time = datetime.now()  # для рассчета времени выполнения скрипта
             work_time = end_time - start_time  # рассчет времени вполнения скрипта
-            import_to_csv('res_h')
             conn.commit()
-            print('\nВремя выполнения скрипта = ', work_time)
+            print('\nВремя работы скрипта = ', work_time)
             time.sleep(2400)
     except KeyboardInterrupt:
         print('\n Вы завершили работу программы. Закрываюсь.')

@@ -24,7 +24,6 @@ app.layout = dash_table.DataTable(
     page_size=100,
     page_action='native',
     sort_mode="multi",
-    filter_action='native',
     sort_action="native",
     style_data={
         'whiteSpace': 'normal',
@@ -51,8 +50,6 @@ app.layout = dash_table.DataTable(
         },
         {
             'if': {
-                'column_id': 'category',
-                'filter_query': '{category} eq "A"',
                 'column_id': 'status',
                 'filter_query': '{status} eq "Error"'
             },
@@ -73,4 +70,4 @@ def len_all_pu():
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=True, host='0.0.0.0')
