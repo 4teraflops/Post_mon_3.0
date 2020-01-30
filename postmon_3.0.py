@@ -6,6 +6,7 @@ import time
 
 # глобальные переменные
 s = requests.Session()
+# s.cert = ('src/cert.pem', 'src/dec.key')  # Подстановка сертификата
 conn = sqlite3.connect('postmon.sqlite')  # Инициируем подключение к БД
 cursor = conn.cursor()
 start_time = datetime.now()
@@ -45,10 +46,15 @@ def create_urls_list():
 
 def open_urls(urls):
     first_id = get_cursor_id('global_answers_data')
+    n = 0
     for url in urls:
+        n += 1
         r = s.get(url)
-        timeout = round(r.elapsed.total_seconds(), 5)  # Округление до 5 знаков после запятой
-        answer_text = r.text.replace('--ERROR--\ncom.techinfocom.bisys.pay.utils.shared.exception.','').replace('\n', '').replace("'", '')
+        timeout = round(r.elapsed.total_seconds(), 3)  # Округление до 3 знаков после запятой
+        answer_text = r.text.replace('--ERROR--\ncom.techinfocom.bisys.pay.utils.shared.exception.', '').replace('\n',
+                                                                                                                 '').replace(
+            "'", '')
+        status = check_answer(answer_text)
         code = str(url).replace(
             'https://uat.autopays.ru/api-shop/rs/shop/test?sec-key=96abc9ad-24dc-4125-9fc4-a8072f7b83c3&service-code=',
             '')
@@ -56,20 +62,54 @@ def open_urls(urls):
         category = cursor.execute(f"SELECT category FROM service_cods WHERE code = '{code}'").fetchall()[0][0]
         operation_time = datetime.now()
         cursor.execute(
-            f"INSERT INTO global_answers_data VALUES (Null, '{operation_time}', '{code}', '{category}', '{timeout}', '{answer_text}', Null)")
+            f"INSERT INTO global_answers_data VALUES (Null, '{operation_time}', '{code}', '{category}', '{timeout}', '{status}')")
         conn.commit()
-        print(f'{code}||{timeout}||{category}||{operation_time}||{answer_text}')
+        print(f'{n}|{code}||{timeout}||{category}||{operation_time}||{status}')
     last_id = get_cursor_id('global_answers_data')
     print('Обновляю данные в часовой таблице')
-    check_answers('global_answers_data', first_id, last_id)
+
     cursor.execute("DELETE from res_h")  # предварительно затираем то, что было в таблице res_h
     res = cursor.execute(f"SELECT * FROM global_answers_data WHERE id > {first_id} and id <= {last_id}").fetchall()
     conn.commit()
     # Записываем результаты последней проверки в таблицу res
     for r in res:
-        r1 = r[1:7:1]  # Отсек первый элемент в каждом из списков (это id, чтоб не было конфликтов)
-        cursor.execute(f"INSERT INTO res_h VALUES (Null, ?, ?, ?, ?, ?, ?)", r1)
+        r1 = r[1:6:1]  # Отсек первый элемент в каждом из списков (это id, чтоб не было конфликтов)
+        cursor.execute(f"INSERT INTO res_h VALUES (Null, ?, ?, ?, ?, ?)", r1)
     conn.commit()
+
+
+def check_answer(answer_text):
+    text = answer_text.replace('--ERROR--\ncom.techinfocom.bisys.pay.utils.shared.exception.', '').replace('\n',
+                                                                                                           '').replace(
+        "'", '')
+    lst_format = ['BIS-01275', 'Неверный формат', 'Недостаточно параметров', 'Отсутствуют требуемые доп параметры',
+                  'BIS-01656']
+    lst_ok = ["BIS-01640", "BIS-01654", "--SUCCESS--", "OtherError:21:", "OtherError:4:", "OtherError:29:",
+              "OtherError:99:",
+              "Отсутствует разрешение на прием платежей", "OtherError:41:", "Проверка не завершилась",
+              "Ошибочный номер абонента", "OtherError:1:"]
+    lst_errors = ["BIS-01262", "BIS-01658", "BIS-01295", "Ошибка подключения к серверу", "Ошибка HTTP", "OtherError:?:",
+                  "Неизвестный протокол в параметрах услуг", "Работа шлюза приостановлена", "OtherError:1:",
+                  "OtherError:Ошибка ?:", "OtherError:242:", "OtherError:79:", "OtherError:Ошибка связи"]
+
+    for frmt in lst_format:
+        if frmt in text:
+            status = 'format'
+            break
+    for ok in lst_ok:
+        if ok in text:
+            status = 'ok'
+            break
+    for error in lst_errors:
+        if error in text:
+            status = 'error'
+    if 'provider == null' in text:
+        status = 'услуга не выведена'
+    if status is not None:
+        return status
+    else:
+        status = 'Null'
+        return status
 
 
 def get_cursor_id(table_name):
@@ -78,56 +118,25 @@ def get_cursor_id(table_name):
     return line_id
 
 
-def check_answers(table_name, first_id, last_id):
-    # Вытащил все записи с частями ответов, котоыре значат ошибку
-    word_errors = []
-    cursor.execute("SELECT * FROM word_errors")
-    for error in cursor:
-        word_errors.append(error[1])
-    id_errors = []
-    for errors in word_errors:  # ищем ответы с ошибками итерацией по словарю с паттернами
-        for id_error in cursor.execute(f"SELECT id FROM {table_name} WHERE answer LIKE '%{errors}%' AND (id <= {last_id} AND id > {first_id})").fetchall():
-            if not id_error:  # если SELECT ничего не вернул, то перейти к следующей итерации
-                continue
-            else:
-                id_errors.append(id_error[0])  # если нашел, то записать
-    # ID записей собраны, теперь добавим им статус ошибки
-    for id in id_errors:
-        cursor.execute(f"UPDATE {table_name} SET status = 'Error' WHERE id = '{id}'")
+def do_alarm(alarmtext):  # отправка сообщения в канал slack
+    headers = {"Content-type": "application/json"}
+    url = "https://hooks.slack.com/services/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"
+    payload = {"text": f"{alarmtext}"}
+    requests.post(url, headers=headers, data=json.dumps(payload))
 
-    #  Теперь тоже самое с ответами, котоыре значат ОК
-    word_ok = []
-    cursor.execute("SELECT * FROM word_ok")
-    for ok in cursor:
-        word_ok.append(ok[1])
-    id_oks = []
-    for oks in word_ok:
-        for id_ok in cursor.execute(f"SELECT id FROM {table_name} WHERE answer LIKE '%{oks}%' AND (id <= {last_id} AND id > {first_id})").fetchall():
-            if not id_ok:
-                continue
-            else:
-                id_oks.append(id_ok[0])
-    for ok_res in id_oks:
-        cursor.execute(f"UPDATE {table_name} SET status = 'OK' WHERE id = '{ok_res}'")
-    conn.commit()
-    # Теперь ошибки, связанные с форматом
-    # паттерномв немного, по этому собираем данные одним запросом
-    id_with_format = cursor.execute(f"SELECT id FROM global_answers_data WHERE (id <= {last_id} AND id > {first_id}) AND (answer LIKE '%BIS-01275%' OR answer LIKE '%Неверный формат%' OR answer LIKE '%Недостаточно параметров%' OR answer LIKE '%Отсутствуют требуемые доп параметры%' OR answer LIKE '%BIS-01656%')").fetchall()
-    for with_format in id_with_format:
-        cursor.execute(f"UPDATE {table_name} SET status = 'Format' WHERE id = {with_format[0]}")
 
-    # Теперь для невыведенных услуг
-    id_shadow = cursor.execute(f"SELECT id FROM {table_name} WHERE answer LIKE 'provider == null' AND (id <= {last_id} AND id > {first_id})").fetchall()
-    for shadow in id_shadow:
-        cursor.execute(f"UPDATE {table_name} SET status = 'Услга не выведена' WHERE id = '{shadow[0]}'")
-
-    conn.commit()
+def digest():
+    id_errors = cursor.execute("SELECT id FROM res_h WHERE status = 'error'").fetchall()
+    id_oks = cursor.execute("SELECT id FROM res_h WHERE status = 'ok'").fetchall()
+    id_with_format = cursor.execute("SELECT id FROM res_h WHERE status = 'format'").fetchall()
+    id_shadow = cursor.execute("SELECT id FROM res_h WHERE status = 'услуга не выведена'").fetchall()
     # Смотрим неопознанные ошибки (которым не присвоилась категория)
-    manual_check = cursor.execute(f"SELECT id FROM {table_name} WHERE status is NULL AND (id <= {last_id} AND id > {first_id})").fetchall()
+    manual_check = cursor.execute(f"SELECT id FROM res_h WHERE status is NULL").fetchall()
     # Подсчитаем общее кол-во проанализированных ПУ
-    len_all_table = cursor.execute(f"SELECT id from {table_name} WHERE (id <= {last_id} AND id > {first_id})").fetchall()
+    len_all_table = cursor.execute(f"SELECT id from res_h").fetchall()
     # Посмотрим есть ли ошибки у клиентов категории А
-    errors_a = cursor.execute(f"SELECT code, answer, status, operation_time FROM {table_name} WHERE category = 'A' AND status = 'Error' AND (id <= {last_id} AND id > {first_id})").fetchall()
+    errors_a = cursor.execute(
+        f"SELECT code, status, operation_time FROM res_h  WHERE category = 'A' AND status = 'Error'").fetchall()
     # Выводим срез по цифрам:
     print(f'\nВсего проанализировано: {len(len_all_table)} ПУ.\n')
     print('Из них: \n')
@@ -138,25 +147,19 @@ def check_answers(table_name, first_id, last_id):
     print(f'{len(id_shadow)} - услуга не выведена')
     print(f'\nКлиентов категории А с ошибками: {len(errors_a)}\n')
     for a in errors_a:
-        print(f'Код услуги: {a[0]}\nСтатус услуги: {a[2]}\nТекст ответа: {a[1]}\nВремя проверки: {a[3]}\n')
+        print(f'Код услуги: {a[0]}\nСтатус услуги: {a[2]}\nВремя проверки: {a[3]}\n')
     conn.commit()
     if len(errors_a) > 0:
         for a in errors_a:
-            alarmtext = f'Код услуги: {a[0]}\nСтатус услуги: {a[2]}\nТекст ответа: {a[1]}\nВремя проверки: {a[3]}'
+            alarmtext = f'Код услуги: {a[0]}\nСтатус услуги: {a[2]}\nВремя проверки: {a[3]}'
             do_alarm(alarmtext)
-
-
-def do_alarm(alarmtext):  # отправка сообщения в канал slack
-    headers = {"Content-type": "application/json"}
-    url = "https://hooks.slack.com/services/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"
-    payload = {"text": f"{alarmtext}"}
-    requests.post(url, headers=headers, data=json.dumps(payload))
 
 
 if __name__ == '__main__':
     try:
         while True:
-            create_urls_list()
+            #create_urls_list()
+            digest()
             end_time = datetime.now()  # для рассчета времени выполнения скрипта
             work_time = end_time - start_time  # рассчет времени вполнения скрипта
             conn.commit()
