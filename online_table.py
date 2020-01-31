@@ -6,16 +6,21 @@ import dash_table
 import pandas as pd
 import sqlite3
 import dash
-
-
+import dash_daq as daq
 
 colors = {
-    'background': '#e0ddff',
-    'background2': 'gray',
-    'text': '#506784'
-    }
+    'background': '#00001a',  # Черный
+    'background2': '#000080',  # Синий
+    'background3': 'royalblue',  # Светло-синий
+    'background_table': 'rgb(230, 230, 230)',
+    'background_white': 'white',
+    'text': 'black',
+    'text1': '#506784'  # цвет из таблицы
+}
 
-app = dash.Dash(__name__)
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+
+app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 server = app.server
 conn = sqlite3.connect('postmon.sqlite', check_same_thread=False)
 cursor = conn.cursor()
@@ -25,71 +30,126 @@ df.index = df['id']
 df_global = pd.read_sql("SELECT code FROM res_h", conn)
 code_list = df_global['code']
 
-
-app.layout = html.Div([html.H1('Crypto Price Graph',
+app.layout = html.Div([html.H1('График истории статусов',
                                style={
-                                      'textAlign': 'center',
-                                      "background": "gray"}),
-               html.Div(['Выбери временной диапазон',
-               dcc.DatePickerRange(
-                   id='date-input',
-                   stay_open_on_select=False,
-                   min_date_allowed=datetime(2020, 1, 1),
-                   max_date_allowed=datetime.now(),
-                   initial_visible_month=datetime.now(),
-                   start_date=datetime.now(),
-                   end_date=datetime.now(),
-                   number_of_months_shown=2,
-                   month_format='MMMM,YYYY',
-                   display_format='YYYY-MM-DD',
-                   style={
-                          'color': 'black',
-                          'font-size': '8px',
-                          'margin': 10,
-                          'padding': '8px',
-                          'background': 'black',
-                   }
-               ),
-               'Выбери код услуги',
-               dcc.Dropdown(id='dropdown',
-                            options=[{'label': i, 'value': i} for i in code_list],
-                            value='code',
-                            optionHeight=10,
-                            style={
-                                'height': '40px',
-                                'font-weight': 100,
-                                'font-size': '8px',
-                                'line-height': '10px',
-                                'color': 'black',
-                                'margin': 0,
-                                'padding': '8px',
-                                'background': 'black',
-                                'position': 'middle',
-                                'display': 'inline-block',
-                                'width': '150px',
-                                'vertical-align': 'middle',
-                                }
-                            ),
-                html.Div(id='date-output'),
-                html.Div(id='intermediate-value', style={'display': 'none'}),
-                               ], className="row ",
-                    style={'marginTop': 0, 'marginBottom': 0, 'font-size': 30, 'color': 'white',
-                           'display': 'inline-block'}),
-               html.Div(id='graph-output'),
-               html.Div(children=[html.H1(children="Data Table",
-                                          style={
-                                              'textAlign': 'center',
-                                              "background": "gray"})
-                                  ]
-                        ),
-               html.Div(children=[html.Table(id='table'), html.Div(id='table-output')]),
-               html.Div(children=[dcc.Markdown(
-                   " © 2019 [DCAICHARA](https://github.com/dc-aichara)  All Rights Reserved.")], style={
-                                'textAlign': 'center',
-                                "background": "yellow"}),
-                              ],
-              style={"background": "#000080"}
-                            )
+                                   'textAlign': 'center',
+                                   'background': colors['background_white'],
+                                   'font-size': 28,
+                               }),
+                       html.Div([' Выбери временной диапазон ',
+                                 dcc.DatePickerRange(
+                                     id='date-input',
+                                     stay_open_on_select=False,
+                                     min_date_allowed=datetime(2020, 1, 1),
+                                     max_date_allowed=datetime.now(),
+                                     initial_visible_month=datetime.now(),
+                                     start_date=datetime.now(),
+                                     end_date=datetime.now(),
+                                     number_of_months_shown=2,
+                                     month_format='MMMM,YYYY',
+                                     display_format='YYYY-MM-DD',
+                                     style={
+                                         'color': colors['text'],
+                                         'font-size': '20px',
+                                         'background': colors['background3'],
+                                         'bottom': 5
+                                     }
+                                 ),
+
+                                 ' Выбери код услуги ',
+                                 dcc.Dropdown(id='dropdown',
+                                              options=[{'label': i, 'value': i} for i in code_list],
+                                              value='code',
+                                              optionHeight=10,
+                                              style={
+                                                  'height': '45px',
+                                                  'vertical-align': 'middle',
+                                                  'font-weight': 100,
+                                                  'font-size': '13px',
+                                                  'color': colors['text1'],
+                                                  'background': colors['background3'],
+                                                  'display': 'inline-block',
+                                                  'width': '150px',
+                                                  'bottom': 5
+
+                                              }
+                                              ),
+                                 html.Div(id='date-output'),
+                                 html.Div(id='intermediate-value', style={'display': 'none'}),
+                                 ], className="row",
+                                style={'marginTop': 0, 'marginBottom': 0, 'font-size': 25,
+                                       'color': colors['background_white'],
+                                       'display': 'inline-block'}),
+                       html.Div(id='graph-output'),
+
+                       html.Div(children=[html.H1(children="Текущее состояние всех ПУ",
+                                                  style={
+                                                      'textAlign': 'center',
+                                                      "background": colors['background_white'],
+                                                      'font-size': 25,
+                                                  }),
+                                          daq.LEDDisplay(
+                                              id='leddisplay_all_pu',
+                                              label='ПУ на мониторинге',
+                                              labelPosition='bottom',
+                                              color='#00cc00',
+                                              backgroundColor=colors['background2'],
+                                              value=len(pd.read_sql("SELECT id FROM res_h", conn)),
+                                              style={
+                                                  'vertical-align': 'middle',
+                                                  'display': 'inline-block',
+                                                  'width': '25%',
+                                              }
+                                          ),
+                                          daq.LEDDisplay(
+                                              id='leddisplay_pu_errors',
+                                              label='ПУ работают с ошибками',
+                                              labelPosition='bottom',
+                                              color='#00cc00',
+                                              backgroundColor=colors['background2'],
+                                              value=len(pd.read_sql("SELECT id FROM res_h WHERE status='error'", conn)),
+                                              style={
+                                                  'vertical-align': 'middle',
+                                                  'display': 'inline-block',
+                                                  'width': '25%',
+                                              }
+                                          ),
+                                            daq.LEDDisplay(
+                                              id='leddisplay_pu_ok',
+                                              label='ПУ в состоянии ok',
+                                              labelPosition='bottom',
+                                              color='#00cc00',
+                                              backgroundColor=colors['background2'],
+                                              value=len(pd.read_sql("SELECT id FROM res_h WHERE status='ok'", conn)),
+                                              style={
+                                                  'vertical-align': 'middle',
+                                                  'display': 'inline-block',
+                                                  'width': '25%',
+                                              }
+                                            ),
+                                            daq.LEDDisplay(
+                                              id='leddisplay_pu_format',
+                                              label='ПУ не подошли по формату',
+                                              labelPosition='bottom',
+                                              color='#00cc00',
+                                              backgroundColor=colors['background2'],
+                                              value=len(pd.read_sql("SELECT id FROM res_h WHERE status='format'", conn)),
+                                              style={
+                                                  'vertical-align': 'middle',
+                                                  'display': 'inline-block',
+                                                  'width': '25%',
+                                              }
+                                          ),
+                                          ]),
+                       html.Div(children=[html.Table(id='table'), html.Div(id='table-output')]),
+                       html.Div(children=[dcc.Markdown(" © 2020 [CKASSA](https://ckassa.ru)  All Rights Reserved.")],
+                                style={
+                           'textAlign': 'center',
+                           "background": colors['background3']}),
+                       ],
+                      style={"background": colors['background3'],
+                             'font-family': 'Verdana, Geneva, Arial, sans-serif'}
+                      )
 
 
 @app.callback(Output('table-output', 'children'),
@@ -100,27 +160,26 @@ def get_data_table(option):
         id='datatable-data',
         data=df.to_dict('records'),
         columns=[{'id': c, 'name': c} for c in df.columns],
-        page_size=50,
+        page_size=25,
         page_action='native',
         filter_action='native',
         sort_mode="multi",
         sort_action="native",
         style_cell={'width': '100px'},
-        style_header={'backgroundColor': 'rgb(230, 230, 230)',
+        style_header={'backgroundColor': colors['background_table'],
                       'fontWeight': 'bold',
-                      'textAlign': 'left',
-                      'border': '1px solid gray'},
+                      'textAlign': 'left'},
         style_data_conditional=[
             {'textAlign': 'left',
              'border': '1px solid gray',
-             'color': '#506784'},
+             'color': '#506784'},  # цвет текста
             {'if': {
                 'column_id': 'category',
-                'filter_query': '{category} eq "A"', },
+                'filter_query': '{category} eq "A"'},
                 "fontWeight": "bold"},
             {'if': {'column_id': 'status',
-                    'filter_query': '{status} eq "Error"'},
-             'backgroundColor': "#ff6b80"}
+                    'filter_query': '{status} eq "еrror"'},
+             'backgroundColor': '#ffafdc'}
         ]
     )
     conn.commit()
@@ -132,7 +191,7 @@ def get_data_table(option):
                Input('date-input', 'end_date'),
                Input('dropdown', 'value')])
 def render_graph(start_date, end_date, option):
-    df = pd.read_sql("SELECT id, operation_time, code, status from global_answers_data", conn)
+    df = pd.read_sql(f"SELECT id, operation_time, code, status from global_answers_data WHERE code = '{option}'", conn)
     df['operation_time'] = pd.to_datetime(df['operation_time'])
     data = df[(df.operation_time >= start_date) & (df.operation_time <= end_date)]
     conn.commit()
@@ -143,30 +202,32 @@ def render_graph(start_date, end_date, option):
                 {'x': data['operation_time'],
                  'y': data['status'],
                  'type': 'bar_chart',
-                 'name': 'value1'},
+                 'name': 'value1',
+                 },
             ],
             'layout': {
-                'title': f'{option.capitalize()} История',
-                'plot_bgcolor': '#cdcdcd',
-                'paper_bgcolor': '#9a9a9a',
+                'title': f'{option.capitalize()} Пульс клиента',
+                'plot_bgcolor': colors['background_table'],  # фон диаграммы
+                'paper_bgcolor': colors['background_white'],  # фон за графиком
                 'font': {
                     'color': colors['text'],
-                    'size': 18
+                    'size': 14
                 },
                 'xaxis': {
-                        'title': 'Дата/Время',
-                        'showspikes': True,
-                        'spikedash': 'dot',
-                        'spikemode': 'across',
-                        'spikesnap': 'cursor',
-                        },
+                    'title': 'Дата и Время',
+                    'showspikes': True,
+                    'spikedash': 'dot',
+                    'spikemode': 'across',
+                    'spikesnap': 'cursor',
+                },
                 'yaxis': {
-                        'title': '',
-                        'showspikes': True,
-                        'spikedash': 'dot',
-                        'spikemode': 'across',
-                        'spikesnap': 'cursor'
-                        },
+                    'title': '',
+                    'showspikes': True,
+                    'spikedash': 'dot',
+                    'spikemode': 'across',
+                    'spikesnap': 'cursor',
+                    'zeroline': 'False',
+                },
 
             }
         }

@@ -95,17 +95,17 @@ def check_answer(answer_text):
     for frmt in lst_format:
         if frmt in text:
             status = 'format'
-            break
+            return status
     for ok in lst_ok:
         if ok in text:
             status = 'ok'
-            break
+            return status
     for error in lst_errors:
         if error in text:
             status = 'error'
+            return status
     if 'provider == null' in text:
         status = 'услуга не выведена'
-    if status is not None:
         return status
     else:
         status = 'Null'
@@ -158,7 +158,7 @@ def digest():
 if __name__ == '__main__':
     try:
         while True:
-            #create_urls_list()
+            create_urls_list()
             digest()
             end_time = datetime.now()  # для рассчета времени выполнения скрипта
             work_time = end_time - start_time  # рассчет времени вполнения скрипта
