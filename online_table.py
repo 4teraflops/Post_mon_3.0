@@ -33,7 +33,7 @@ code_list = df_global['code']
 app.layout = html.Div([html.H1('График истории статусов',
                                style={
                                    'textAlign': 'center',
-                                   'background': colors['background_white'],
+                                   'background': colors['background_table'],
                                    'font-size': 28,
                                }),
                        html.Div([' Выбери временной диапазон ',
@@ -85,7 +85,7 @@ app.layout = html.Div([html.H1('График истории статусов',
                        html.Div(children=[html.H1(children="Текущее состояние всех ПУ",
                                                   style={
                                                       'textAlign': 'center',
-                                                      "background": colors['background_white'],
+                                                      "background": colors['background_table'],
                                                       'font-size': 25,
                                                   }),
                                           daq.LEDDisplay(
@@ -99,6 +99,7 @@ app.layout = html.Div([html.H1('График истории статусов',
                                                   'vertical-align': 'middle',
                                                   'display': 'inline-block',
                                                   'width': '25%',
+                                                  'color': 'white'
                                               }
                                           ),
                                           daq.LEDDisplay(
@@ -112,6 +113,7 @@ app.layout = html.Div([html.H1('График истории статусов',
                                                   'vertical-align': 'middle',
                                                   'display': 'inline-block',
                                                   'width': '25%',
+                                                  'color': 'white'
                                               }
                                           ),
                                             daq.LEDDisplay(
@@ -125,6 +127,8 @@ app.layout = html.Div([html.H1('График истории статусов',
                                                   'vertical-align': 'middle',
                                                   'display': 'inline-block',
                                                   'width': '25%',
+                                                  'color': 'white'
+
                                               }
                                             ),
                                             daq.LEDDisplay(
@@ -138,6 +142,7 @@ app.layout = html.Div([html.H1('График истории статусов',
                                                   'vertical-align': 'middle',
                                                   'display': 'inline-block',
                                                   'width': '25%',
+                                                  'color': 'white'
                                               }
                                           ),
                                           ]),
