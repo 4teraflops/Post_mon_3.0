@@ -60,7 +60,7 @@ def open_urls(urls):
             '')
         #  вытащил значение в виде list, забрал первое значение этого list
         category = cursor.execute(f"SELECT category FROM service_cods WHERE code = '{code}'").fetchall()[0][0]
-        operation_time = datetime.now()
+        operation_time = round(datetime.now(), 3)
         cursor.execute(
             f"INSERT INTO global_answers_data VALUES (Null, '{operation_time}', '{code}', '{category}', '{timeout}', '{status}')")
         conn.commit()

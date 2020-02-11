@@ -20,6 +20,7 @@ colors = {
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
+
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 server = app.server
 conn = sqlite3.connect('postmon.sqlite', check_same_thread=False)
@@ -33,6 +34,7 @@ code_list = df_global['code']
 app.layout = html.Div([html.H1('График истории статусов',
                                style={
                                    'textAlign': 'center',
+                                    "fontWeight": "bold",
                                    'background': colors['background_table'],
                                    'font-size': 28,
                                }),
@@ -82,9 +84,10 @@ app.layout = html.Div([html.H1('График истории статусов',
                                        'display': 'inline-block'}),
                        html.Div(id='graph-output'),
 
-                       html.Div(children=[html.H1(children="Текущее состояние всех ПУ",
+                       html.Div(children=[html.H1(children="Текущее состояние мониторинга",
                                                   style={
                                                       'textAlign': 'center',
+                                                      "fontWeight": "bold",
                                                       "background": colors['background_table'],
                                                       'font-size': 25,
                                                   }),
@@ -98,7 +101,7 @@ app.layout = html.Div([html.H1('График истории статусов',
                                               style={
                                                   'vertical-align': 'middle',
                                                   'display': 'inline-block',
-                                                  'width': '25%',
+                                                  'width': '20%',
                                                   'color': 'white'
                                               }
                                           ),
@@ -112,7 +115,7 @@ app.layout = html.Div([html.H1('График истории статусов',
                                               style={
                                                   'vertical-align': 'middle',
                                                   'display': 'inline-block',
-                                                  'width': '25%',
+                                                  'width': '20%',
                                                   'color': 'white'
                                               }
                                           ),
@@ -126,14 +129,14 @@ app.layout = html.Div([html.H1('График истории статусов',
                                               style={
                                                   'vertical-align': 'middle',
                                                   'display': 'inline-block',
-                                                  'width': '25%',
+                                                  'width': '20%',
                                                   'color': 'white'
 
                                               }
                                             ),
                                             daq.LEDDisplay(
                                               id='leddisplay_pu_format',
-                                              label='ПУ не подошли по формату',
+                                              label='ПУ с ошибкой формата',
                                               labelPosition='bottom',
                                               color='#00cc00',
                                               backgroundColor=colors['background2'],
@@ -141,7 +144,21 @@ app.layout = html.Div([html.H1('График истории статусов',
                                               style={
                                                   'vertical-align': 'middle',
                                                   'display': 'inline-block',
-                                                  'width': '25%',
+                                                  'width': '20%',
+                                                  'color': 'white'
+                                              }
+                                          ),
+                                            daq.LEDDisplay(
+                                              id='leddisplay_pu_shadow',
+                                              label='ПУ с невыведенной услугой',
+                                              labelPosition='bottom',
+                                              color='#00cc00',
+                                              backgroundColor=colors['background2'],
+                                              value=len(pd.read_sql("SELECT id FROM res_h WHERE status='усгуга не выведена'", conn)),
+                                              style={
+                                                  'vertical-align': 'middle',
+                                                  'display': 'inline-block',
+                                                  'width': '20%',
                                                   'color': 'white'
                                               }
                                           ),
