@@ -1,20 +1,19 @@
-import dash_html_components as html
-import dash_core_components as dcc
-from dash.dependencies import Input, Output
+import requests
 from datetime import datetime
-import dash_table
-import pandas as pd
 import sqlite3
-import dash
-import dash_daq as daq
+import json
+import time
 
-conn = sqlite3.connect('postmon.sqlite', check_same_thread=False)
+# глобальные переменные
+s = requests.Session()
+# s.cert = ('src/cert.pem', 'src/dec.key')  # Подстановка сертификата
+conn = sqlite3.connect('postmon.sqlite')  # Инициируем подключение к БД
 cursor = conn.cursor()
+start_time = datetime.now()
 
+# Присваиваем категории, взяв данные из файла
+with open('/home/sanaev-va/Рабочий стол/B', 'rU') as f:
+    cods = f.read().split('\n')
 
-def get_len_all_pu():
-    all_pu = pd.read_sql("SELECT id FROM res_h", conn)
-    return len(all_pu)
-
-
-print(type(get_len_all_pu()))
+cursor.execute(f'UPDATE service_cods SET category = "B" where code in {tuple(cods)}')
+conn.commit()

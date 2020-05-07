@@ -60,14 +60,14 @@ def open_urls(urls):
             '')
         #  вытащил значение в виде list, забрал первое значение этого list
         category = cursor.execute(f"SELECT category FROM service_cods WHERE code = '{code}'").fetchall()[0][0]
-        operation_time = round(datetime.now(), 3)
+        now = datetime.now()
+        operation_time = now.strftime('%d-%m-%Y %H:%M:%S')
         cursor.execute(
             f"INSERT INTO global_answers_data VALUES (Null, '{operation_time}', '{code}', '{category}', '{timeout}', '{status}')")
         conn.commit()
         print(f'{n}|{code}||{timeout}||{category}||{operation_time}||{status}')
     last_id = get_cursor_id('global_answers_data')
     print('Обновляю данные в часовой таблице')
-
     cursor.execute("DELETE from res_h")  # предварительно затираем то, что было в таблице res_h
     res = cursor.execute(f"SELECT * FROM global_answers_data WHERE id > {first_id} and id <= {last_id}").fetchall()
     conn.commit()
@@ -136,7 +136,8 @@ def digest():
     len_all_table = cursor.execute(f"SELECT id from res_h").fetchall()
     # Посмотрим есть ли ошибки у клиентов категории А
     errors_a = cursor.execute(
-        f"SELECT code, status, operation_time FROM res_h  WHERE category = 'A' AND status = 'Error'").fetchall()
+        f"SELECT code, status, operation_time FROM res_h  WHERE category = 'A' AND (status = 'Error' OR status = 'услуга не выведена')").fetchall()
+    errors_b = cursor.execute(f"SELECT code, status, operation_time FROM res_h  WHERE category = 'B' AND (status = 'Error' OR status = 'услуга не выведена')").fetchall()
     # Выводим срез по цифрам:
     print(f'\nВсего проанализировано: {len(len_all_table)} ПУ.\n')
     print('Из них: \n')
@@ -147,11 +148,18 @@ def digest():
     print(f'{len(id_shadow)} - услуга не выведена')
     print(f'\nКлиентов категории А с ошибками: {len(errors_a)}\n')
     for a in errors_a:
-        print(f'Код услуги: {a[0]}\nСтатус услуги: {a[2]}\nВремя проверки: {a[3]}\n')
+        print(f'Код услуги: {a[0]}\nСтатус услуги: {a[1]}\nВремя проверки: {a[2]}\n')
+    print(f'\nКлиентов категории B с ошибками: {len(errors_b)}\n')
+    for b in errors_b:
+        print(f'Код услуги: {b[0]}\nСтатус услуги: {b[1]}\nВремя проверки: {b[2]}\n')
     conn.commit()
-    if len(errors_a) > 0:
+    if errors_a:
         for a in errors_a:
-            alarmtext = f'Код услуги: {a[0]}\nСтатус услуги: {a[2]}\nВремя проверки: {a[3]}'
+            alarmtext = f'Код услуги: {a[0]}\nСтатус услуги: {a[1]}\nВремя проверки: {a[2]}'
+            do_alarm(alarmtext)
+    elif errors_b:
+        for b in errors_b:
+            alarmtext = f'Код услуги: {b[0]}\nСтатус услуги: {b[1]}\nВремя проверки: {b[2]}'
             do_alarm(alarmtext)
 
 

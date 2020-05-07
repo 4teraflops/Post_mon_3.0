@@ -84,7 +84,7 @@ app.layout = html.Div([html.H1('График истории статусов',
                                        'display': 'inline-block'}),
                        html.Div(id='graph-output'),
 
-                       html.Div(children=[html.H1(children="Текущее состояние мониторинга",
+                       html.Div(children=[html.H1(children="Текущее состояние",
                                                   style={
                                                       'textAlign': 'center',
                                                       "fontWeight": "bold",
@@ -154,7 +154,7 @@ app.layout = html.Div([html.H1('График истории статусов',
                                               labelPosition='bottom',
                                               color='#00cc00',
                                               backgroundColor=colors['background2'],
-                                              value=len(pd.read_sql("SELECT id FROM res_h WHERE status='усгуга не выведена'", conn)),
+                                              value=len(pd.read_sql("SELECT id FROM res_h WHERE status='услуга не выведена'", conn)),
                                               style={
                                                   'vertical-align': 'middle',
                                                   'display': 'inline-block',
@@ -172,6 +172,7 @@ app.layout = html.Div([html.H1('График истории статусов',
                       style={"background": colors['background3'],
                              'font-family': 'Verdana, Geneva, Arial, sans-serif'}
                       )
+conn.commit()
 
 
 @app.callback(Output('table-output', 'children'),
@@ -257,4 +258,4 @@ def render_graph(start_date, end_date, option):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host='0.0.0.0')
+    app.run_server(debug=False, host='0.0.0.0')
